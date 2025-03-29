@@ -53,7 +53,7 @@ st.set_page_config(layout="wide")
 
 # Center the dashboard title with a larger font size using HTML/CSS
 st.markdown(
-    "<h1 style='text-align: center; color: black; font-size: 48px;'>Osun State Election Votes Dashboard</h1>",
+    "<h1 style='text-align: center; color: white; font-size: 48px;'>Osun State Election Votes Dashboard</h1>",
     unsafe_allow_html=True
 )
 
@@ -155,3 +155,25 @@ with st.container(border=True):
     fig4.update_layout(mapbox_style="open-street-map")
     st.plotly_chart(fig4, use_container_width=True)
 
+# Display Outliers Filtered by LGA
+with st.container(border=True):
+    st.subheader("Outliers by LGA")
+    lga_filter = st.selectbox("Select LGA", options=df["LGA"].unique())
+    lga_filtered_df = filtered_df[filtered_df["LGA"] == lga_filter]
+
+    # Create a DataFrame for outliers
+    outlier_columns = ["PU-Name", "APC_outlier", "LP_outlier", "PDP_outlier", "NNPP_outlier"]
+    outlier_df = lga_filtered_df[outlier_columns]
+
+    # Filter to show only rows where at least one party has an "Outlier" label
+    outlier_df = outlier_df[
+        (outlier_df["APC_outlier"] == "Outlier") |
+        (outlier_df["LP_outlier"] == "Outlier") |
+        (outlier_df["PDP_outlier"] == "Outlier") |
+        (outlier_df["NNPP_outlier"] == "Outlier")
+    ]
+
+    if not outlier_df.empty:
+        st.dataframe(outlier_df)
+    else:
+        st.write("No outliers found for the selected LGA.")
