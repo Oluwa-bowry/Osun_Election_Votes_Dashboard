@@ -8,44 +8,7 @@ def format_number(value):
         return f"{value/1000:,.0f}K"
     return f"{value:,.0f}"
 
-# Load the data (replace with your CSV file path)
-# For now, I'll use the sample data you provided, with the new columns
-data = {
-    "State": ["OYO", "OYO", "OYO", "OYO", "OYO"],
-    "LGA": ["LAGELU", "LAGELU", "LAGELU", "LAGELU", "LAGELU"],
-    "Ward": ["AJARA/OPEODU", "AJARA/OPEODU", "ARULOGUN EHIN/KELEBE", "AJARA/OPEODU", "LAGELU MARKET/KAJOLA/GBENA"],
-    "PU-Name": ["ST. STEPHEN PRIMARY SCHOOL, ALEGONGO", "I.D.C. PRIMARY SCHOOL, OPE ODU", "COURT HALL, OLORUNDA", "I.D.C. PRIMARY SCHOOL, AJARA", "ST. DAVID'S SCHOOL, ABIDIODAN"],
-    "Latitude": [7.417565, 7.417565, 7.417565, 7.417565, 7.417565],
-    "Longitude": [3.937383, 3.937383, 3.937383, 3.937383, 3.937383],
-    "Total_Votes": [501.0, 464.0, 449.0, 273.0, 271.0],
-    "GiZ": [1.010275, 1.009426, 1.009102, 1.006207, 1.006183],
-    "p_value": [0.078, 0.078, 0.076, 0.078, 0.075],
-    "HotCold": ["Not Significant", "Not Significant", "Not Significant", "Not Significant", "Not Significant"],
-    "Anomaly": [-1, -1, -1, 1, 1],
-    "Anomaly_Label": ["Anomaly", "Anomaly", "Anomaly", "Normal", "Normal"],
-    "local_moran_I": [5.482662, 4.953104, 4.738419, 2.219442, 2.190817],
-    "z_score": [1.474940, 1.484867, 1.489226, 1.474940, 1.496972],
-    "LM_std": [21.785931, 19.681631, 18.828537, 8.818896, 8.705150],
-    "GO_abs": [1.010275, 1.009426, 1.009102, 1.006207, 1.006183],
-    "IF_indicator": [1, 1, 1, 0, 0],
-    "composite_outlier_score": [7.932069, 7.230352, 6.945880, 3.275034, 3.237111],
-    "APC": [227, 273, 237, 146, 175],
-    "APC_z_score": [3.377687, 4.378068, 3.595161, 1.616147, 2.246822],
-    "APC_outlier": ["Outlier", "Outlier", "Outlier", "Normal", "Normal"],
-    "LP": [228, 106, 125, 87, 74],
-    "LP_z_score": [8.161980, 3.464838, 4.196360, 2.733316, 2.232801],
-    "LP_outlier": ["Outlier", "Outlier", "Outlier", "Normal", "Normal"],
-    "PDP": [46, 83, 84, 40, 22],
-    "PDP_z_score": [0.691558, 2.242578, 2.284497, 0.440041, -0.314509],
-    "PDP_outlier": ["Normal", "Normal", "Normal", "Normal", "Normal"],
-    "NNPP": [0, 2, 3, 0, 0],
-    "NNPP_z_score": [-0.194218, 0.335518, 0.600386, -0.194218, -0.194218],
-    "NNPP_outlier": ["Normal", "Normal", "Normal", "Normal", "Normal"],
-    "Accredited_Voters": [600, 550, 500, 300, 350],
-    "Registered_Voters": [800, 750, 700, 500, 450]
-}
-#df = pd.DataFrame(data)
-
+# Load the data
 df = pd.read_csv("OSUN_geocoded_cleaned_final.csv")
 
 # Set page configuration for a wide layout
@@ -53,7 +16,7 @@ st.set_page_config(layout="wide")
 
 # Center the dashboard title with a larger font size using HTML/CSS
 st.markdown(
-    "<h1 style='text-align: center; color: white; font-size: 48px;'>Osun State Election Votes Dashboard</h1>",
+    "<h1 style='text-align: center; color: black; font-size: 48px;'>Election Votes Dashboard</h1>",
     unsafe_allow_html=True
 )
 
@@ -100,7 +63,6 @@ voter_comparison = pd.DataFrame({
 })
 
 # Main Visualizations (Bar, Line, Pie, and Map)
-# Use st.container to add borders around each visual
 col6, col7, col8 = st.columns(3)
 
 with col6:
@@ -177,3 +139,33 @@ with st.container(border=True):
         st.dataframe(outlier_df)
     else:
         st.write("No outliers found for the selected LGA.")
+
+# New Visualization: Consistent Outliers by LGA
+with st.container(border=True):
+    st.subheader("Consistent Outliers by LGA")
+    
+    # Define consistent outliers based on multiple criteria
+    # 1. Anomaly_Label is "Anomaly"
+    # 2. IF_indicator is 1
+    # 3. composite_outlier_score is above the 75th percentile
+    score_threshold = filtered_df["composite_outlier_score"].quantile(0.75)
+    consistent_outliers = filtered_df[
+        (filtered_df["Anomaly_Label"] == "Anomaly") &
+        (filtered_df["IF_indicator"] == 1) &
+        (filtered_df["composite_outlier_score"] >= score_threshold)
+    ]
+
+    # Count consistent outliers by LGA
+    if not consistent_outliers.empty:
+        consistent_outliers_by_lga = consistent_outliers.groupby("LGA").size().reset_index(name="Count")
+        fig5 = px.bar(
+            consistent_outliers_by_lga,
+            x="LGA",
+            y="Count",
+            color="LGA",
+            title="Number of Consistent Outliers by LGA",
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        st.plotly_chart(fig5, use_container_width=True)
+    else:
+        st.write("No consistent outliers found based on the selected criteria.")
